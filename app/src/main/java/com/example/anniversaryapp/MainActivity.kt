@@ -28,6 +28,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.animation.core.*
 import androidx.compose.material3.*
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextAlign
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -51,17 +52,33 @@ class MainActivity : ComponentActivity() {
 fun AnniversaryApp(){
 
     val scale = remember { Animatable(1f) }
+    var clickCount by remember { mutableStateOf(0) }
+    val haptic = LocalHapticFeedback.current
 
+    //Animacija kao bounce
+    LaunchedEffect(clickCount) {
+        scale.animateTo(
+            1.2f,
+            animationSpec = tween(500)
+        )
+        scale.animateTo(
+            1f,
+            animationSpec = tween(500)
+        )
+    }
+
+    val maxClicks = 4
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(32.dp),
         verticalArrangement = Center,
-        horizontalAlignment = Alignment.CenterHorizontally)
+        horizontalAlignment = Alignment.CenterHorizontally
+    )
     {
         Text(
-            text = "Klikni na srce!",
+            text = "Klikni na srce...",
             style = MaterialTheme.typography.bodyLarge,
             fontSize = 20.sp,
             color = Color.DarkGray
@@ -73,7 +90,22 @@ fun AnniversaryApp(){
             modifier = Modifier
                 .size(512.dp)
                 .scale(scale.value)
+                .clickable {
+                    clickCount++
+                    haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                }
         )
+
+        //Spacer(modifier = Modifier.height(16.dp))
+
+        if (clickCount >= maxClicks) {
+            Text(
+                text = "4 klika za 4. godišnjicu!\nVojim te 🐻 <3 🐸",
+                color = Color.hsl(300f, 0.6f, 0.7f),
+                fontSize = 20.sp,
+                textAlign = TextAlign.Center
+            )
+        }
     }
 }
 
