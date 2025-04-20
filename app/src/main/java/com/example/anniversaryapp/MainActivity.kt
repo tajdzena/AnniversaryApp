@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.layout.Arrangement.Top
 import androidx.compose.material3.*
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
@@ -112,7 +113,7 @@ fun HomeScreen(onStartGame: () -> Unit){
 
         //Spacer(modifier = Modifier.height(16.dp))
 
-        if (clickCount >= maxClicks) {
+        if (clickCount >= maxClicks) { //Dodati konfeti efekat
             Text(
                 text = "4 klika za 4 godine ljubavi!\nVojim te 🐻 <3 🐸", //Dodati animaciju pri pojavljivanju teksta
                 color = Color.hsl(300f, 0.6f, 0.7f),
@@ -133,12 +134,18 @@ fun HomeScreen(onStartGame: () -> Unit){
 fun MiniGameScreen(onExit: () -> Unit) {
     val scale = remember { Animatable(1f) }
     var score by remember { mutableStateOf(0) }
-    var timeLeft by remember { mutableStateOf(10) } // u sekundama
     var gameRunning by remember { mutableStateOf(false) }
+
+    //Nivoi
+    val durations = listOf(5, 15, 30)
+    var selectedDuration by remember { mutableStateOf(5) }
+
+
+    var timeLeft by remember { mutableStateOf(selectedDuration) } //U zavisnosti od nivoa
 
     LaunchedEffect(gameRunning) {
         if (gameRunning) {
-            for (i in 10 downTo 1) {
+            for (i in selectedDuration downTo 1) {
                 timeLeft = i
                 delay(1000)
             }
@@ -158,8 +165,26 @@ fun MiniGameScreen(onExit: () -> Unit) {
         verticalArrangement = Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            durations.forEach { duration ->
+                Button(
+                    onClick = { selectedDuration = duration },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (selectedDuration == duration) MaterialTheme.colorScheme.primary else Color.LightGray
+                    ),
+                    modifier = Modifier.padding(horizontal = 4.dp)
+                ) {
+                    Text("${duration}s")
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(40.dp))
+
         if (!gameRunning) {
-            Text("Klikni što više puta za 10 sekundi!", fontSize = 20.sp, textAlign = TextAlign.Center)
+            Text("Klikni što više puta za odabrano vreme!", fontSize = 20.sp, textAlign = TextAlign.Center)
             Spacer(modifier = Modifier.height(16.dp))
             Button(onClick = {
                 score = 0
