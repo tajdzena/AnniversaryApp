@@ -27,11 +27,23 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement.Top
 import androidx.compose.material3.*
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.zIndex
+import com.example.anniversaryapp.ui.theme.InterFont
 import kotlinx.coroutines.delay
+import nl.dionsegijn.konfetti.compose.KonfettiView
+import nl.dionsegijn.konfetti.core.Party
+import nl.dionsegijn.konfetti.core.Position
+import nl.dionsegijn.konfetti.core.emitter.Emitter
+import nl.dionsegijn.konfetti.core.models.Shape
+import nl.dionsegijn.konfetti.core.models.Size
+import java.util.concurrent.TimeUnit
+
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -67,6 +79,8 @@ fun AnniversaryApp(){
 
 @Composable
 fun HomeScreen(onStartGame: () -> Unit){
+    val backgroundColor = MaterialTheme.colorScheme.background
+
     val scale = remember { Animatable(1f) }
     var clickCount by remember { mutableStateOf(0) }
     val haptic = LocalHapticFeedback.current
@@ -85,47 +99,71 @@ fun HomeScreen(onStartGame: () -> Unit){
 
     val maxClicks = 4
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(32.dp),
-        verticalArrangement = Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    )
-    {
-        Text(
-            text = "Klikni na srce...",
-            style = MaterialTheme.typography.bodyLarge,
-            fontSize = 20.sp,
-            color = Color.DarkGray
-        )
+    Box(modifier = Modifier.fillMaxSize()) {
 
-        Image(
-            painter = painterResource(id = R.drawable.pixel_heart),
-            contentDescription = "Pixel Heart",
+        // Glavni sadrzaj
+        Column(
             modifier = Modifier
-                .size(512.dp)
-                .scale(scale.value)
-                .clickable {
-                    clickCount++
-                    haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
-                }
-        )
-
-        //Spacer(modifier = Modifier.height(16.dp))
-
-        if (clickCount >= maxClicks) { //Dodati konfeti efekat, i videti za long press
+                .fillMaxSize()
+                .background(backgroundColor)  // Pozadina koja se menja u zavisnosti od teme
+                .padding(32.dp),
+            verticalArrangement = Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
             Text(
-                text = "4 klika za 4 godine ljubavi!\nVojim te 🐻 <3 🐸", //Dodati animaciju pri pojavljivanju teksta
-                color = Color.hsl(300f, 0.6f, 0.7f),
+                text = "Klikni na srce...",
                 fontSize = 20.sp,
-                textAlign = TextAlign.Center
+                color = Color.Gray //Podesiti za dark theme?
             )
-            Spacer(modifier = Modifier.height(32.dp)) // da se napravi razmak od dugmeta mini igrica
+
+            Image(
+                painter = painterResource(id = R.drawable.pixel_heart),
+                contentDescription = "Pixel Heart",
+                modifier = Modifier
+                    .size(512.dp)
+                    .scale(scale.value)
+                    .clickable {
+                        clickCount++
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    }
+            )
+
+            if (clickCount >= maxClicks) {
+                Text(
+                    text = "4 klika za 4 godine ljubavi!\nVojim te 🐻 <3 🐸",
+                    color = Color.hsl(300f, 0.6f, 0.7f),
+                    fontSize = 20.sp,
+                    textAlign = TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(32.dp))
+            }
+
+            Button(onClick = onStartGame,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xED210E31)
+                )) {
+                Text("Mini igrica", fontFamily = InterFont, color = Color.White)
+            }
         }
 
-        Button(onClick = onStartGame) {
-            Text("Mini igrica")
+        // Konfete kao overlay
+        if (clickCount >= maxClicks) {
+            KonfettiView(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .zIndex(1f), // osigurava da je iznad svega
+                parties = listOf(
+                    Party(
+                        emitter = Emitter(duration = 3, TimeUnit.SECONDS).perSecond(100),
+                        position = Position.Relative(0.5, 0.0), // sa sredine gore
+                        spread = 360,
+                        speed = 30f,
+                        shapes = listOf(Shape.Circle, Shape.Square),
+                        colors = listOf(0xfce18a.toInt(), 0xff726d.toInt(), 0xf4306d.toInt(), 0xb48def.toInt()),
+                        size = listOf(Size.SMALL, Size.LARGE)
+                    )
+                )
+            )
         }
     }
 }
@@ -133,6 +171,8 @@ fun HomeScreen(onStartGame: () -> Unit){
 
 @Composable
 fun MiniGameScreen(onExit: () -> Unit) {
+    val backgroundColor = MaterialTheme.colorScheme.background
+
     val scale = remember { Animatable(1f) }
     var score by remember { mutableStateOf(0) }
     var gameRunning by remember { mutableStateOf(false) }
@@ -147,18 +187,18 @@ fun MiniGameScreen(onExit: () -> Unit) {
 
     //Cuvanje high scores za svaki nivo
     val context = LocalContext.current
-    val prefs = context.getSharedPreferences("high_scores", Context.MODE_PRIVATE)
-    val highScoreKey = "high_score_${selectedDuration}s"
-    var highScore by remember { mutableStateOf(prefs.getInt(highScoreKey, 0)) }
-
+    val highScoreManager = remember { HighScoreManager(context) }
+    var highScore by remember { mutableStateOf(highScoreManager.getHighScore(selectedDuration)) }
 
     LaunchedEffect(gameRunning) {
         if (gameRunning) {
-            for (i in selectedDuration downTo 0) {
+            for (i in selectedDuration downTo 1) {
                 timeLeft = i
                 delay(1000)
             }
             gameRunning = false
+            highScoreManager.saveHighScore(selectedDuration, score)
+            highScore = highScoreManager.getHighScore(selectedDuration)
         }
     }
 
@@ -167,17 +207,14 @@ fun MiniGameScreen(onExit: () -> Unit) {
         scale.animateTo(1f, tween(100))
     }
 
-
-    LaunchedEffect(!gameRunning && score > 0) {
-        if (score > highScore) {
-            highScore = score
-            prefs.edit().putInt(highScoreKey, score).apply()
-        }
+    LaunchedEffect(selectedDuration) {
+        highScore = highScoreManager.getHighScore(selectedDuration)
     }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .background(backgroundColor)
             .padding(32.dp),
         verticalArrangement = Center,
         horizontalAlignment = Alignment.CenterHorizontally
@@ -188,12 +225,20 @@ fun MiniGameScreen(onExit: () -> Unit) {
             durations.forEach { duration ->
                 Button(
                     onClick = { selectedDuration = duration },
+                    enabled = !gameRunning, //disable ostala dva dugmica dok jedan nivo traje
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (selectedDuration == duration) MaterialTheme.colorScheme.primary else Color.LightGray
+                        containerColor = when {
+                            selectedDuration == duration -> Color(0xED210E31) // Boja za selektovan nivo kad nije igra
+                            else -> Color.Gray // Ostali
+                        },
+                        disabledContainerColor = when {
+                            gameRunning && duration == selectedDuration -> Color(0xED210E31) //aktivni nivo da izgleda isto i kad je disabled - (custom boja kasnije - Color(0xFFB00020) hex kod)
+                            else -> Color.Gray
+                        }
                     ),
                     modifier = Modifier.padding(horizontal = 4.dp)
                 ) {
-                    Text("${duration}s")
+                    Text("${duration}s", color = Color.White, fontFamily = InterFont)
                 }
             }
         }
@@ -206,7 +251,7 @@ fun MiniGameScreen(onExit: () -> Unit) {
             if (!gameRunning) "Klikni što više puta\n za odabrano vreme!"
             else "Najveći broj klikova: $highScore\n\nPreostalo vreme: ${timeLeft}s",
             fontSize = 20.sp,
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center //Podesiti da tekst bude bele boje u dark modu
         )
 
         if (gameRunning) {
@@ -234,8 +279,13 @@ fun MiniGameScreen(onExit: () -> Unit) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        Button(onClick = onExit) {
-            Text("Nazad")
+        Button(
+            onClick = onExit,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color(0xED210E31)
+            )
+        ) {
+            Text("Nazad", color = Color.White, fontFamily = InterFont)
         }
     }
 }
