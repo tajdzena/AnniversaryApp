@@ -113,7 +113,7 @@ fun HomeScreen(onStartGame: () -> Unit){
 
         //Spacer(modifier = Modifier.height(16.dp))
 
-        if (clickCount >= maxClicks) { //Dodati konfeti efekat
+        if (clickCount >= maxClicks) { //Dodati konfeti efekat, i videti za long press
             Text(
                 text = "4 klika za 4 godine ljubavi!\nVojim te 🐻 <3 🐸", //Dodati animaciju pri pojavljivanju teksta
                 color = Color.hsl(300f, 0.6f, 0.7f),
@@ -145,7 +145,7 @@ fun MiniGameScreen(onExit: () -> Unit) {
 
     LaunchedEffect(gameRunning) {
         if (gameRunning) {
-            for (i in selectedDuration downTo 1) {
+            for (i in selectedDuration downTo 0) {
                 timeLeft = i
                 delay(1000)
             }
@@ -183,35 +183,42 @@ fun MiniGameScreen(onExit: () -> Unit) {
 
         Spacer(modifier = Modifier.height(40.dp))
 
-        if (!gameRunning) {
-            Text("Klikni što više puta za odabrano vreme!", fontSize = 20.sp, textAlign = TextAlign.Center)
-            Spacer(modifier = Modifier.height(16.dp))
-            Button(onClick = {
-                score = 0
-                timeLeft = 10
-                gameRunning = true
-            }) {
-                Text("Počni!")
-            }
-            Spacer(modifier = Modifier.height(16.dp))
-            Button(onClick = onExit) {
-                Text("Nazad")
-            }
-        } else {
-            Text("Preostalo vreme: ${timeLeft}s", fontSize = 20.sp)
-            Text("Broj klikova: $score", fontSize = 20.sp)
-            Spacer(modifier = Modifier.height(16.dp))
 
-            Image(
-                painter = painterResource(id = R.drawable.pixel_heart),
-                contentDescription = "Pixel Heart",
-                modifier = Modifier
-                    .size(512.dp)
-                    .scale(scale.value)
-                    .clickable {
+        //Izmenjena logika - klik na srce pokrece igricu, a ne na dugme
+        Text(
+            if (!gameRunning) "Klikni što više puta\n za odabrano vreme!"
+            else "Preostalo vreme: ${timeLeft}s",
+            fontSize = 20.sp,
+            textAlign = TextAlign.Center
+        )
+
+        if (gameRunning) {
+            Text("Broj klikova: $score", fontSize = 20.sp)
+        }
+
+        //Spacer(modifier = Modifier.height(6.dp))
+
+        Image(
+            painter = painterResource(id = R.drawable.pixel_heart),
+            contentDescription = "Pixel Heart",
+            modifier = Modifier
+                .size(512.dp)
+                .scale(scale.value)
+                .clickable {
+                    if (!gameRunning) {
+                        score = 0
+                        timeLeft = selectedDuration
+                        gameRunning = true
+                    } else {
                         score++
                     }
-            )
+                }
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Button(onClick = onExit) {
+            Text("Nazad")
         }
     }
 }
