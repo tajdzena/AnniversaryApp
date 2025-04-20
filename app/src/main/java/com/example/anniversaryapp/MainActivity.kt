@@ -1,5 +1,6 @@
 package com.example.anniversaryapp
 
+import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -137,11 +138,19 @@ fun MiniGameScreen(onExit: () -> Unit) {
     var gameRunning by remember { mutableStateOf(false) }
 
     //Nivoi
+    //Napomena - namestiti da dok traje odbrojavanje i igranje jednog nivoa, ostala dva dugmeta treba da postanu disabled
     val durations = listOf(5, 15, 30)
     var selectedDuration by remember { mutableStateOf(5) }
 
-
     var timeLeft by remember { mutableStateOf(selectedDuration) } //U zavisnosti od nivoa
+
+
+    //Cuvanje high scores za svaki nivo
+    val context = LocalContext.current
+    val prefs = context.getSharedPreferences("high_scores", Context.MODE_PRIVATE)
+    val highScoreKey = "high_score_${selectedDuration}s"
+    var highScore by remember { mutableStateOf(prefs.getInt(highScoreKey, 0)) }
+
 
     LaunchedEffect(gameRunning) {
         if (gameRunning) {
@@ -156,6 +165,14 @@ fun MiniGameScreen(onExit: () -> Unit) {
     LaunchedEffect(score) {
         scale.animateTo(1.2f, tween(100))
         scale.animateTo(1f, tween(100))
+    }
+
+
+    LaunchedEffect(!gameRunning && score > 0) {
+        if (score > highScore) {
+            highScore = score
+            prefs.edit().putInt(highScoreKey, score).apply()
+        }
     }
 
     Column(
@@ -187,7 +204,7 @@ fun MiniGameScreen(onExit: () -> Unit) {
         //Izmenjena logika - klik na srce pokrece igricu, a ne na dugme
         Text(
             if (!gameRunning) "Klikni što više puta\n za odabrano vreme!"
-            else "Preostalo vreme: ${timeLeft}s",
+            else "Najveći broj klikova: $highScore\n\nPreostalo vreme: ${timeLeft}s",
             fontSize = 20.sp,
             textAlign = TextAlign.Center
         )
