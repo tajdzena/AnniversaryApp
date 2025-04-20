@@ -29,6 +29,7 @@ import androidx.compose.animation.core.*
 import androidx.compose.material3.*
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
+import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -51,6 +52,19 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun AnniversaryApp(){
 
+    var inGame by remember { mutableStateOf(false) }
+
+    if (inGame) {
+        MiniGameScreen(onExit = { inGame = false })
+    } else {
+        HomeScreen(onStartGame = { inGame = true })
+    }
+
+
+}
+
+@Composable
+fun HomeScreen(onStartGame: () -> Unit){
     val scale = remember { Animatable(1f) }
     var clickCount by remember { mutableStateOf(0) }
     val haptic = LocalHapticFeedback.current
@@ -100,14 +114,83 @@ fun AnniversaryApp(){
 
         if (clickCount >= maxClicks) {
             Text(
-                text = "4 klika za 4. godišnjicu!\nVojim te 🐻 <3 🐸",
+                text = "4 klika za 4 godine ljubavi!\nVojim te 🐻 <3 🐸", //Dodati animaciju pri pojavljivanju teksta
                 color = Color.hsl(300f, 0.6f, 0.7f),
                 fontSize = 20.sp,
                 textAlign = TextAlign.Center
             )
+            Spacer(modifier = Modifier.height(32.dp)) // da se napravi razmak od dugmeta mini igrica
+        }
+
+        Button(onClick = onStartGame) {
+            Text("Mini igrica")
         }
     }
 }
+
+
+@Composable
+fun MiniGameScreen(onExit: () -> Unit) {
+    val scale = remember { Animatable(1f) }
+    var score by remember { mutableStateOf(0) }
+    var timeLeft by remember { mutableStateOf(10) } // u sekundama
+    var gameRunning by remember { mutableStateOf(false) }
+
+    LaunchedEffect(gameRunning) {
+        if (gameRunning) {
+            for (i in 10 downTo 1) {
+                timeLeft = i
+                delay(1000)
+            }
+            gameRunning = false
+        }
+    }
+
+    LaunchedEffect(score) {
+        scale.animateTo(1.2f, tween(100))
+        scale.animateTo(1f, tween(100))
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(32.dp),
+        verticalArrangement = Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        if (!gameRunning) {
+            Text("Klikni što više puta za 10 sekundi!", fontSize = 20.sp, textAlign = TextAlign.Center)
+            Spacer(modifier = Modifier.height(16.dp))
+            Button(onClick = {
+                score = 0
+                timeLeft = 10
+                gameRunning = true
+            }) {
+                Text("Počni!")
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            Button(onClick = onExit) {
+                Text("Nazad")
+            }
+        } else {
+            Text("Preostalo vreme: ${timeLeft}s", fontSize = 20.sp)
+            Text("Broj klikova: $score", fontSize = 20.sp)
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Image(
+                painter = painterResource(id = R.drawable.pixel_heart),
+                contentDescription = "Pixel Heart",
+                modifier = Modifier
+                    .size(512.dp)
+                    .scale(scale.value)
+                    .clickable {
+                        score++
+                    }
+            )
+        }
+    }
+}
+
 
 
 //fun Greeting(name: String, modifier: Modifier = Modifier) {
