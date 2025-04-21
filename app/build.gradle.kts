@@ -9,7 +9,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.anniversaryapp"
-        minSdk = 34
+        minSdk = 29
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
@@ -68,4 +68,6 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
     implementation(libs.konfetti.compose)
+    implementation(libs.coil.compose)
+    implementation(libs.coil.gif)
 }
