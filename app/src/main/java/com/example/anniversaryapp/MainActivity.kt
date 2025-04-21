@@ -43,7 +43,11 @@ import nl.dionsegijn.konfetti.core.emitter.Emitter
 import nl.dionsegijn.konfetti.core.models.Shape
 import nl.dionsegijn.konfetti.core.models.Size
 import java.util.concurrent.TimeUnit
-
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalConfiguration
+import kotlin.random.Random
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -77,9 +81,12 @@ fun AnniversaryApp(){
 
 }
 
+
 @Composable
 fun HomeScreen(onStartGame: () -> Unit){
     val backgroundColor = MaterialTheme.colorScheme.background
+    val isDark = isSystemInDarkTheme()
+    val textColor = if (isDark) Color.White else Color.DarkGray
 
     val scale = remember { Animatable(1f) }
     var clickCount by remember { mutableStateOf(0) }
@@ -99,6 +106,10 @@ fun HomeScreen(onStartGame: () -> Unit){
 
     val maxClicks = 4
 
+    //Konfete
+    var showConfetti by remember { mutableStateOf(false) }
+    var showPurpleConfetti by remember { mutableStateOf(false) }
+
     Box(modifier = Modifier.fillMaxSize()) {
 
         // Glavni sadrzaj
@@ -113,7 +124,7 @@ fun HomeScreen(onStartGame: () -> Unit){
             Text(
                 text = "Klikni na srce...",
                 fontSize = 20.sp,
-                color = Color.Gray //Podesiti za dark theme?
+                color = textColor //Podesiti za dark theme?
             )
 
             Image(
@@ -122,13 +133,21 @@ fun HomeScreen(onStartGame: () -> Unit){
                 modifier = Modifier
                     .size(512.dp)
                     .scale(scale.value)
-                    .clickable {
-                        clickCount++
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    .pointerInput(Unit) {
+                        detectTapGestures(
+                            onTap = {
+                                clickCount++
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            },
+                            onLongPress = {
+                                showPurpleConfetti = true
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            }
+                        )
                     }
             )
 
-            if (clickCount >= maxClicks) {
+            if (clickCount == maxClicks) {
                 Text(
                     text = "4 klika za 4 godine ljubavi!\nVojim te 🐻 <3 🐸",
                     color = Color.hsl(300f, 0.6f, 0.7f),
@@ -136,42 +155,68 @@ fun HomeScreen(onStartGame: () -> Unit){
                     textAlign = TextAlign.Center
                 )
                 Spacer(modifier = Modifier.height(32.dp))
+                showConfetti = true
             }
 
             Button(onClick = onStartGame,
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xED210E31)
+                    containerColor = Color(0xED3B124D)
                 )) {
                 Text("Mini igrica", fontFamily = InterFont, color = Color.White)
             }
         }
 
-        // Konfete kao overlay
-        if (clickCount >= maxClicks) {
+        if (showConfetti || showPurpleConfetti) {
             KonfettiView(
                 modifier = Modifier
                     .fillMaxSize()
-                    .zIndex(1f), // osigurava da je iznad svega
+                    .zIndex(1f),
                 parties = listOf(
                     Party(
                         emitter = Emitter(duration = 3, TimeUnit.SECONDS).perSecond(100),
-                        position = Position.Relative(0.5, 0.0), // sa sredine gore
+                        position = Position.Relative(0.5, 0.0),
                         spread = 360,
                         speed = 30f,
                         shapes = listOf(Shape.Circle, Shape.Square),
-                        colors = listOf(0xfce18a.toInt(), 0xff726d.toInt(), 0xf4306d.toInt(), 0xb48def.toInt()),
+                        colors = if (showPurpleConfetti) {
+                            listOf(
+                                0xFFB6A0FF.toInt(),
+                                0xFF957DAD.toInt(),
+                                0xFFB48DEF.toInt(),
+                                0xFF9C27B0.toInt(),
+                                0xFFCE93D8.toInt()
+                            )
+                        } else {
+                            listOf(
+                                0xfce18a.toInt(),
+                                0xff726d.toInt(),
+                                0xf4306d.toInt(),
+                                0xb48def.toInt()
+                            )
+                        },
                         size = listOf(Size.SMALL, Size.LARGE)
                     )
                 )
             )
+            // Reset posle 3 sekunde
+            LaunchedEffect(showConfetti, showPurpleConfetti) {
+                delay(5000)
+                showConfetti = false
+                showPurpleConfetti = false
+            }
         }
     }
 }
 
 
+
+
+
 @Composable
 fun MiniGameScreen(onExit: () -> Unit) {
     val backgroundColor = MaterialTheme.colorScheme.background
+    val isDark = isSystemInDarkTheme()
+    val textColor = if (isDark) Color.White else Color.DarkGray
 
     val scale = remember { Animatable(1f) }
     var score by remember { mutableStateOf(0) }
@@ -179,7 +224,7 @@ fun MiniGameScreen(onExit: () -> Unit) {
 
     //Nivoi
     //Napomena - namestiti da dok traje odbrojavanje i igranje jednog nivoa, ostala dva dugmeta treba da postanu disabled
-    val durations = listOf(5, 15, 30)
+    val durations = listOf(5, 10, 20)
     var selectedDuration by remember { mutableStateOf(5) }
 
     var timeLeft by remember { mutableStateOf(selectedDuration) } //U zavisnosti od nivoa
@@ -228,11 +273,11 @@ fun MiniGameScreen(onExit: () -> Unit) {
                     enabled = !gameRunning, //disable ostala dva dugmica dok jedan nivo traje
                     colors = ButtonDefaults.buttonColors(
                         containerColor = when {
-                            selectedDuration == duration -> Color(0xED210E31) // Boja za selektovan nivo kad nije igra
+                            selectedDuration == duration -> Color(0xED3B124D) // Boja za selektovan nivo kad nije igra
                             else -> Color.Gray // Ostali
                         },
                         disabledContainerColor = when {
-                            gameRunning && duration == selectedDuration -> Color(0xED210E31) //aktivni nivo da izgleda isto i kad je disabled - (custom boja kasnije - Color(0xFFB00020) hex kod)
+                            gameRunning && duration == selectedDuration -> Color(0xED3B124D) //aktivni nivo da izgleda isto i kad je disabled - (custom boja kasnije - Color(0xFFB00020) hex kod)
                             else -> Color.Gray
                         }
                     ),
@@ -251,11 +296,12 @@ fun MiniGameScreen(onExit: () -> Unit) {
             if (!gameRunning) "Klikni što više puta\n za odabrano vreme!"
             else "Najveći broj klikova: $highScore\n\nPreostalo vreme: ${timeLeft}s",
             fontSize = 20.sp,
-            textAlign = TextAlign.Center //Podesiti da tekst bude bele boje u dark modu
+            textAlign = TextAlign.Center,
+            color = textColor //Podesiti da tekst bude bele boje u dark modu
         )
 
         if (gameRunning) {
-            Text("Broj klikova: $score", fontSize = 20.sp)
+            Text("Broj klikova: $score", fontSize = 20.sp, color = textColor)
         }
 
         //Spacer(modifier = Modifier.height(6.dp))
@@ -266,15 +312,28 @@ fun MiniGameScreen(onExit: () -> Unit) {
             modifier = Modifier
                 .size(512.dp)
                 .scale(scale.value)
-                .clickable {
-                    if (!gameRunning) {
-                        score = 0
-                        timeLeft = selectedDuration
-                        gameRunning = true
-                    } else {
-                        score++
-                    }
+                .pointerInput(Unit) {
+                    detectTapGestures(
+                        onTap = {
+                            if (!gameRunning) {
+                                score = 0
+                                timeLeft = selectedDuration
+                                gameRunning = true
+                            } else {
+                                score++
+                            }
+                        }
+                    )
                 }
+//                .clickable {
+//                    if (!gameRunning) {
+//                        score = 0
+//                        timeLeft = selectedDuration
+//                        gameRunning = true
+//                    } else {
+//                        score++
+//                    }
+//                }
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -282,7 +341,7 @@ fun MiniGameScreen(onExit: () -> Unit) {
         Button(
             onClick = onExit,
             colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xED210E31)
+                containerColor = Color(0xED3B124D)
             )
         ) {
             Text("Nazad", color = Color.White, fontFamily = InterFont)
